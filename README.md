@@ -19,9 +19,12 @@ Thư mục dự án được cấu trúc như sau:
     ├── ddid11_transactions/
     │   ├── DDID11_02_transaction_blocks.sql # Khối giao dịch đa bước (COMMIT, ROLLBACK, SAVEPOINT)
     │   └── README.md                        # Hướng dẫn chi tiết luồng kiểm thử giao dịch
-    └── ddid12_constraints/
-        ├── DDID12_03_constraints_consistency.sql # Kiểm chứng ràng buộc & tính toàn vẹn dữ liệu
-        └── README.md                             # Giải thích và bài học thực tiễn về ràng buộc
+    ├── ddid12_constraints/
+    │   ├── DDID12_03_constraints_consistency.sql # Kiểm chứng ràng buộc & tính toàn vẹn dữ liệu
+    │   └── README.md                             # Giải thích và bài học thực tiễn về ràng buộc
+    └── ddid13_concurrency/
+        ├── DDID13_04_concurrency_control.sql # Script kiểm soát tranh chấp và race conditions
+        └── README.md                         # Tài liệu hướng dẫn về Concurrency Control
 ```
 
 ---
@@ -57,3 +60,6 @@ psql -d postgres -f database/seed.sql
 
 ### 3. [Task 12: Ràng buộc & Tính toàn vẹn dữ liệu](file:///Users/anhtran/Desktop/Affiliate_voucher_db/affiliate_voucher_db/tasks/ddid12_constraints/README.md)
 * **Khái niệm cốt lõi:** Thiết lập `CHECK constraints`, `FOREIGN KEY` cascade actions, `UNIQUE constraints` phục vụ nghiệp vụ tiếp thị và chống gian lận (fraud-detection).
+
+### 4. [Task 13: Concurrency Control & Race Conditions](file:///Users/anhtran/Desktop/Affiliate_voucher_db/affiliate_voucher_db/tasks/ddid13_concurrency/README.md)
+* **Khái niệm cốt lõi:** Kiểm soát tranh chấp (Concurrency Control), hiện tượng Lost Update, Pessimistic Locking (`SELECT ... FOR UPDATE`), cơ chế hàng đợi khóa của PostgreSQL, Deadlock và xử lý quá tải hàng đợi khóa (`NOWAIT`).
