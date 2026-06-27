@@ -191,6 +191,75 @@ SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1 FOR UPDATE NOWAIT
 
 ---
 
+### Kịch bản E — Flash Sale 500-Request (Kiểm thử hiệu năng bằng pgbench)
+
+**Khái niệm:** Việc kiểm thử bằng 2 Terminal rất tốt để học tập, nhưng điều gì xảy ra khi có **500 request đồng thời** đổ bộ vào database? Chúng ta sẽ sử dụng công cụ kiểm thử hiệu năng tích hợp sẵn của PostgreSQL là `pgbench` để giả lập một đợt Flash Sale lớn và chứng minh rằng cơ chế khóa `FOR UPDATE` có thể chịu tải thành công.
+
+**Bước 1:** Tạo một file chứa logic khóa bảo mật tại đầu đường dẫn: `sql/marketing/flash_sale_test.sql` (và sao chép vào `tasks/ddid13_concurrency/flash_sale_test.sql`):
+```sql
+BEGIN;
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1 FOR UPDATE;
+UPDATE linh_lab.voucher SET total_issued = total_issued + 1 WHERE voucher_id = 1;
+COMMIT;
+```
+
+**Bước 2:** Đặt lại (Reset) giá trị `total_issued` của voucher về `0` trong SQL Editor:
+```sql
+UPDATE linh_lab.voucher SET total_issued = 0 WHERE voucher_id = 1;
+```
+
+**Bước 3:** Mở Terminal hệ thống của bạn (Bash / Zsh / Command Prompt) và chạy lệnh `pgbench` dưới đây để giả lập 100 người dùng đồng thời, mỗi người nhấn "Nhận voucher" 5 lần (tổng cộng 500 request):
+```bash
+pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/ddid13_concurrency/flash_sale_test.sql
+```
+*(Lưu ý: Thay đổi `-U postgres -d postgres` bằng thông tin tài khoản và database thực tế của bạn nếu cần, ví dụ: `-d ecommerce_db`).*
+
+**Bước 4:** Kiểm tra lại database.
+Nhờ việc sử dụng khóa `FOR UPDATE`, giá trị `total_issued` cuối cùng sẽ là **chính xác 500**. Không có cập nhật nào bị mất, không bị crash! (Nếu bạn thử bỏ dòng `FOR UPDATE` trong script và chạy lại, giá trị cuối cùng sẽ bị sai lệch hoàn toàn và không thể dự đoán trước).
+
+---
+
+### Kịch bản F — Tấm khiên tối thượng (Mức cô lập SERIALIZABLE)
+
+**Khái niệm:** Cho đến nay, chúng ta đã dùng `FOR UPDATE` (Khóa bi quan) để khắc phục Race Condition. Nhưng PostgreSQL cung cấp một "tấm khiên" tích hợp sẵn giúp ngăn chặn các bất thường này mà không cần sử dụng khóa rõ ràng: **Mức cô lập giao dịch (Isolation Levels)**.
+Mức cô lập mặc định là `READ COMMITTED` (gây ra lỗi Lost Update trong Kịch bản A). Bây giờ, hãy thử nâng lên mức nghiêm ngặt nhất: `SERIALIZABLE`.
+
+**Terminal A:**
+```sql
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+-- Một câu lệnh SELECT bình thường, KHÔNG dùng khóa "FOR UPDATE"!
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1;
+-- Giả sử trả về 500
+```
+
+**Terminal B:**
+```sql
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+-- SELECT bình thường
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1;
+-- Cũng trả về 500
+```
+
+**Terminal A:**
+```sql
+-- Ứng dụng tính toán 500 + 10 = 510
+UPDATE linh_lab.voucher SET total_issued = 510 WHERE voucher_id = 1;
+COMMIT;
+-- Thành công!
+```
+
+**Terminal B:**
+```sql
+-- Ứng dụng cũng tính toán 500 + 10 = 510 và chạy lệnh update
+UPDATE linh_lab.voucher SET total_issued = 510 WHERE voucher_id = 1;
+-- ⚡ BÙNG NỔ: Terminal B lập tức gặp lỗi và bị hủy bỏ!
+-- ERROR: could not serialize access due to concurrent update
+```
+
+> **Bài học rút ra:** Mức cô lập `SERIALIZABLE` hoạt động như một cơ chế **Khóa lạc quan (Optimistic Lock)**. Nó cho phép mọi người đọc dữ liệu tự do, nhưng ngay khi một transaction cố gắng commit một bản cập nhật xung đột với transaction đã commit trước đó, PostgreSQL sẽ lập tức hủy bỏ (abort) transaction đi sau! Điều này giúp ngăn chặn hoàn toàn lỗi Lost Update mà không cần viết lệnh khóa `FOR UPDATE` thủ công.
+
+---
+
 ## 💬 Câu hỏi Phản tư & Trả lời (Reflection Q&A)
 
 ### Câu hỏi 1:

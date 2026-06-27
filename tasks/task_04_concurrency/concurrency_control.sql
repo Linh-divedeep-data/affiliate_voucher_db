@@ -166,6 +166,66 @@ COMMIT;   -- Chạy trên Terminal A để giải phóng khóa cho Voucher 1
 
 
 -- ============================================================================
+-- 🔬 Kịch bản E — Flash Sale 500-Request (Kiểm thử hiệu năng bằng pgbench)
+-- Mô tả: Giả lập 500 requests đồng thời sử dụng pgbench để kiểm tra tính toàn vẹn của FOR UPDATE.
+-- ============================================================================
+
+-- [Bước 1]: Tạo file sql/marketing/flash_sale_test.sql với logic khóa bảo mật:
+-- BEGIN;
+-- SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1 FOR UPDATE;
+-- UPDATE linh_lab.voucher SET total_issued = total_issued + 1 WHERE voucher_id = 1;
+-- COMMIT;
+
+-- [Bước 2]: Reset số lượng phát hành của voucher về 0 trước khi test
+UPDATE linh_lab.voucher SET total_issued = 0 WHERE voucher_id = 1;
+
+-- [Bước 3]: Chạy pgbench để mô phỏng 100 users đồng thời, mỗi user click 5 lần (tổng 500 requests):
+-- Lệnh shell (chạy trên Terminal máy tính):
+-- pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/ddid13_concurrency/flash_sale_test.sql
+
+-- [Bước 4]: Xác minh kết quả trên Database
+-- Kết quả total_issued phải đạt đúng 500. Không có cập nhật nào bị ghi đè hay mất!
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1;
+
+
+-- ============================================================================
+-- 🔬 Kịch bản F — Tấm khiên tối thượng (Mức cô lập SERIALIZABLE)
+-- Mô tả: Sử dụng Transaction Isolation Level SERIALIZABLE thay vì khóa FOR UPDATE.
+-- ============================================================================
+
+-- ------------------
+-- [TERMINAL A - Bước 1]
+-- ------------------
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+-- Dùng SELECT bình thường, hoàn toàn không sử dụng khóa FOR UPDATE
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1;
+
+-- ------------------
+-- [TERMINAL B - Bước 2]
+-- ------------------
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+-- SELECT bình thường
+SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1;
+
+-- ------------------
+-- [TERMINAL A - Bước 3]
+-- ------------------
+-- Giả sử đọc được 500, ứng dụng tính toán 500 + 10 = 510 và chạy cập nhật
+UPDATE linh_lab.voucher SET total_issued = 510 WHERE voucher_id = 1;
+COMMIT;
+-- Kết quả: Thành công lưu giá trị 510!
+
+-- ------------------
+-- [TERMINAL B - Bước 4]
+-- ------------------
+-- Ứng dụng B vẫn nghĩ giá trị là 500, nên tính toán 500 + 10 = 510 và chạy cập nhật
+UPDATE linh_lab.voucher SET total_issued = 510 WHERE voucher_id = 1;
+-- KẾT QUẢ: PostgreSQL lập tức chặn và báo lỗi serialize access
+-- Đầu ra: ERROR: could not serialize access due to concurrent update
+ROLLBACK; -- Đóng giao dịch lỗi
+
+
+-- ============================================================================
 -- 💬 Trả lời Câu hỏi Phản tư (Reflection Answers)
 -- ============================================================================
 /*
