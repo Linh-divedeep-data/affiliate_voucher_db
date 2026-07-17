@@ -1,5 +1,5 @@
 -- ===========================================================================
--- DDID-15 | Bài 6 — Data Auditing (Primitive Change Data Capture)
+-- Bài 6 — Data Auditing (Primitive Change Data Capture)
 -- ===========================================================================
 -- 🎯 Mục tiêu:
 --    Xây dựng hệ thống kiểm toán (audit) ở tầng Database bằng History Table

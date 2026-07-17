@@ -1,5 +1,5 @@
 -- ===========================================================================
--- DDID-17 | Bài 8 — Isolation Levels & Read Phenomena
+-- Bài 8 — Isolation Levels & Read Phenomena
 -- ===========================================================================
 -- 🎯 Mục tiêu:
 --    Hiểu 4 hiện tượng đọc sai lệch (Read Phenomena) khi nhiều Transaction

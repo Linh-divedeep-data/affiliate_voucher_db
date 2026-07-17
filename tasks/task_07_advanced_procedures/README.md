@@ -1,5 +1,20 @@
 # 📝 Bài 7 — Advanced Data Orchestration & Dynamic Reporting
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Quy trình nhiều bước → đóng gói ở DB** | Quy trình nghiệp vụ nhiều bước phụ thuộc nhau (đọc → tính → ghi → đánh dấu) nếu để Backend điều phối từng bước sẽ có 2 rủi ro: network latency (mỗi bước tốn 1 round-trip) và partial failure (mạng sập giữa 2 bước để lại dữ liệu nửa vời). Đóng gói vào `PROCEDURE` loại bỏ cả hai. |
+| **PROCEDURE (ghi) vs FUNCTION (đọc)** | `PROCEDURE` (`CALL`, tự `COMMIT`/`ROLLBACK` được) dùng cho quy trình ghi nhiều bước cần `EXCEPTION` handler riêng. `FUNCTION` (chạy trong transaction của caller) dùng cho báo cáo/tính toán, trả `TABLE` cho tầng đọc — chọn nhầm loại sẽ không đạt transaction safety cần thiết. |
+| **Tham số mảng & FILTER cho báo cáo động** | `BIGINT[]` + `= ANY()` để lọc theo danh sách ID linh hoạt; `FILTER (WHERE ...)` cho aggregate có điều kiện trong cùng 1 `SELECT` — 2 kỹ thuật tái sử dụng cho mọi hàm báo cáo động ở dự án khác. |
+| **Chỉ đẩy xuống DB khi thực sự cần nguyên tử+hiệu năng** | PL/pgSQL khó version-control/test như code ứng dụng, khó scale ngang, không phải ai cũng thành thạo — chỉ nên áp dụng cho quy trình thực sự cần tính nguyên tử chặt và hiệu năng cao trên khối lượng lớn, không phải mặc định cho mọi logic. |
+| **Idempotency tự nhiên qua điều kiện lọc trạng thái** | Một procedure lọc theo `WHERE status IS NULL`/`= pending` sẽ tự động idempotent (chạy lại không xử lý trùng) — nhưng nếu điều kiện lọc bị sửa sai, chạy lại có thể tính trùng kết quả; luôn kiểm tra kỹ điều kiện này khi review code. |
+| **Áp dụng khi thấy Backend "điều phối" nhiều câu SQL** | Ngay khi thấy code ứng dụng gọi nhiều câu SQL liên tiếp để hoàn thành 1 quy trình ghi — cân nhắc gộp thành 1 Stored Procedure duy nhất trước khi optimize theo hướng khác. |
+
+---
+
 ## 🎯 Nội dung học tập & Bài học rút ra (Key Learnings)
 
 Ở các bài trước, dữ liệu được bảo vệ bằng Constraints, Locks, và Triggers — các cơ chế **phản ứng tự động**. Tuy nhiên, quy trình nghiệp vụ thực tế thường bao gồm **nhiều bước phức tạp** (đọc → tính toán → ghi → thông báo). Đẩy toàn bộ logic này lên Backend (NodeJS/Python) có 2 rủi ro:

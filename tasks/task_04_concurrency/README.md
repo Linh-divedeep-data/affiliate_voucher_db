@@ -1,4 +1,19 @@
-# 📝 Task: DDID-13 · Concurrency Control & Race Conditions (Kiểm soát Tranh chấp & Race Conditions)
+# 📝 Task 04 · Concurrency Control & Race Conditions (Kiểm soát Tranh chấp & Race Conditions)
+
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Read-modify-write = tiềm ẩn Lost Update** | Bất kỳ pattern "đọc giá trị → tính toán ở ứng dụng → ghi lại" nào trên một dòng có thể bị nhiều request cùng chạm vào đồng thời đều tiềm ẩn Lost Update — mặc định phải khóa dòng đó (`SELECT ... FOR UPDATE`) hoặc viết lại thành 1 câu UPDATE nguyên tử (`SET x = x + 1`), không được tin rằng CHECK constraint là đủ. |
+| **"Số lượng giới hạn dùng chung" = cờ đỏ** | Bất kỳ tính năng nào có khái niệm "số lượng còn lại/giới hạn" mà nhiều người dùng cùng tranh chấp (tồn kho, suất học, chỗ ngồi, số dư ví) đều là ứng viên chắc chắn của race condition này, không riêng gì voucher. |
+| **Ưu tiên Atomic UPDATE hơn khóa tường minh** | Viết lại thành atomic UPDATE (`UPDATE ... SET qty = qty - 1 WHERE qty >= 1`) trước khi nghĩ tới khóa tường minh — rẻ hơn, không cần giữ transaction mở lâu; chỉ dùng `SELECT FOR UPDATE` khi logic giữa đọc và ghi phức tạp hơn 1 câu lệnh đơn. |
+| **Chọn cơ chế khóa theo tần suất xung đột** | Xung đột thường xuyên + cần đúng tuyệt đối → Pessimistic (`FOR UPDATE`). Xung đột hiếm + muốn tối đa throughput → Optimistic (cột `version`). Cần fail nhanh thay vì chờ → `NOWAIT`. Nhiều worker lấy job song song → `SKIP LOCKED`. |
+| **Khóa cùng thứ tự để tránh deadlock** | Luôn khóa tài nguyên theo **cùng một thứ tự cố định** ở mọi nơi trong code; không bao giờ mở `FOR UPDATE` rồi chờ input/API bên ngoài trước khi `COMMIT`; ở tải cực cao, đánh giá trước xem connection pool có chịu nổi hàng đợi khóa hay cần đẩy ra queue. |
+| **Load test trước khi lên production** | Ngay khi thiết kế bất kỳ tính năng nào có "giới hạn số lượng dùng chung" — chạy thử bằng `pgbench` hoặc tương đương **trước khi** lên production, đừng đợi báo cáo số liệu sai lệch từ thực tế mới phát hiện. |
+
+---
 
 ## 🎯 Nội dung học tập & Bài học rút ra (Key Learnings)
 
@@ -195,7 +210,7 @@ SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1 FOR UPDATE NOWAIT
 
 **Khái niệm:** Việc kiểm thử bằng 2 Terminal rất tốt để học tập, nhưng điều gì xảy ra khi có **500 request đồng thời** đổ bộ vào database? Chúng ta sẽ sử dụng công cụ kiểm thử hiệu năng tích hợp sẵn của PostgreSQL là `pgbench` để giả lập một đợt Flash Sale lớn và chứng minh rằng cơ chế khóa `FOR UPDATE` có thể chịu tải thành công.
 
-**Bước 1:** Tạo một file chứa logic khóa bảo mật tại đầu đường dẫn: `sql/marketing/flash_sale_test.sql` (và sao chép vào `tasks/ddid13_concurrency/flash_sale_test.sql`):
+**Bước 1:** Script kiểm thử đã có sẵn tại `tasks/task_04_concurrency/flash_sale_test.sql`:
 ```sql
 BEGIN;
 SELECT total_issued FROM linh_lab.voucher WHERE voucher_id = 1 FOR UPDATE;
@@ -210,7 +225,7 @@ UPDATE linh_lab.voucher SET total_issued = 0 WHERE voucher_id = 1;
 
 **Bước 3:** Mở Terminal hệ thống của bạn (Bash / Zsh / Command Prompt) và chạy lệnh `pgbench` dưới đây để giả lập 100 người dùng đồng thời, mỗi người nhấn "Nhận voucher" 5 lần (tổng cộng 500 request):
 ```bash
-pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/ddid13_concurrency/flash_sale_test.sql
+pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/task_04_concurrency/flash_sale_test.sql
 ```
 *(Lưu ý: Thay đổi `-U postgres -d postgres` bằng thông tin tài khoản và database thực tế của bạn nếu cần, ví dụ: `-d ecommerce_db`).*
 
@@ -303,5 +318,6 @@ UPDATE linh_lab.voucher SET total_issued = 510 WHERE voucher_id = 1;
 
 Sản phẩm của bài tập được lưu trữ tại:
 ```
-tasks/ddid13_concurrency/DDID13_04_concurrency_control.sql
+tasks/task_04_concurrency/concurrency_control.sql
+tasks/task_04_concurrency/flash_sale_test.sql
 ```

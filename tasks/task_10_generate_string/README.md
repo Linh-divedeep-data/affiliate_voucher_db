@@ -1,6 +1,19 @@
 # 📘 Task 10 — Generate WHERE Clause String
 
-**Ticket:** DDID-19
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Phân quyền phức tạp → data-driven, không hard-code** | Khi thấy nhu cầu "hàng trăm nhánh IF/ELSE phân quyền theo user/bảng/cột", đừng viết cứng trong code ứng dụng — chuyển thành bảng cấu hình (data-driven), để thêm/sửa quyền chỉ là 1 câu `INSERT`/`UPDATE`, không cần deploy lại. |
+| **Tự động chọn LIKE/IN/= theo hình dạng giá trị** | Giá trị có `%` → `LIKE`; nhiều giá trị → `IN`; đúng 1 giá trị → `=` — pattern sinh điều kiện động này tái sử dụng được cho bất kỳ hệ thống filter/search động nào, không riêng RLS. |
+| **Deny-by-default là quy tắc an toàn mặc định** | "Không có config → `1=0`" luôn an toàn hơn "→ `1=1`" — lỗi cấu hình chỉ khiến user không thấy gì thay vì thấy hết dữ liệu; áp dụng nguyên tắc này cho mọi cơ chế phân quyền ở dự án khác, không chỉ SQL. |
+| **Chuỗi SQL động luôn phải escape/tham số hóa** | Không bao giờ nối trực tiếp giá trị từ bảng cấu hình vào chuỗi SQL — dùng `format('%L', ...)` hoặc tham số hóa, bất kể nguồn dữ liệu "có vẻ đáng tin" tới đâu, để chặn SQL Injection từ gốc. |
+| **Kiểm tra tồn tại của bảng/cột trước khi dùng động** | Khi tên bảng/cột không biết trước lúc viết code (đến từ cấu hình), luôn kiểm tra qua `information_schema` và chuẩn hóa case (`LOWER()`) trước khi build câu lệnh — tránh lỗi runtime khi cấu hình trỏ tới đối tượng không tồn tại. |
+| **Áp dụng khi gặp yêu cầu phân quyền linh hoạt, hay đổi** | Bất kỳ dự án nào có ma trận phân quyền phức tạp và hay thay đổi theo thời gian — cân nhắc pattern "bảng cấu hình + sinh điều kiện động" thay vì code cứng ngay từ giai đoạn thiết kế. |
+
+---
 
 ## 📋 Mục tiêu
 

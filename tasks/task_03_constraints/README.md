@@ -1,4 +1,19 @@
-# 📝 Task: DDID-12 · Enforce Data Consistency (ACID) via Database Constraints
+# 📝 Task 03 · Enforce Data Consistency (ACID) via Database Constraints
+
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **DB là chốt chặn cuối, không phải app** | Không bao giờ tin tưởng tuyệt đối vào validate ở tầng ứng dụng cho những bất biến nghiệp vụ **quan trọng** (không được âm, không được vượt ngưỡng, không được trùng) — luôn khai báo lại chúng dưới dạng `CHECK`/`UNIQUE` constraint ở tầng schema. |
+| **Nhiều kênh ghi = tín hiệu cần constraint** | Bất kỳ khi nào nghe thấy "hệ thống có nhiều nguồn ghi dữ liệu" (nhiều service, ETL, admin panel, script tay) hoặc "logic này tuyệt đối không được sai" — đó là tín hiệu cần đẩy ràng buộc xuống tầng database, vì không thể đảm bảo mọi kênh ghi đều đi qua đúng 1 lớp validate. |
+| **CHECK đa cột & Trigger tự động điền** | `CHECK` đa cột cho bất biến giữa 2 trường liên quan trong cùng dòng; `BEFORE UPDATE TRIGGER` cho việc tự động điền giá trị hệ thống (`updated_at`, version...) — cả hai là pattern chuẩn có thể copy sang bất kỳ schema mới nào. |
+| **CHECK trong dòng, Trigger liên dòng** | Nếu ràng buộc chỉ liên quan cột trong cùng 1 dòng → dùng `CHECK`; nếu cần tổng hợp liên dòng/liên bảng → không dùng được `CHECK` chuẩn, phải chuyển sang Trigger hoặc khóa (`FOR UPDATE`) ở tầng ứng dụng. |
+| **CHECK không chặn được Lost Update** | Đừng lầm tưởng CHECK constraint bảo vệ được khỏi Lost Update (2 transaction đọc-ghi song song vẫn có thể cùng pass CHECK riêng lẻ — cần Task 04 để giải quyết); luôn dùng `AFTER` (không phải `BEFORE`) khi trigger có mục đích ghi log/audit. |
+| **Rà soát constraint ngay khi thiết kế schema** | Với mỗi bất biến nghiệp vụ được liệt kê trong tài liệu yêu cầu của dự án mới, tự hỏi "ràng buộc này đã được khai báo ở DB chưa, hay mới chỉ nằm trong code ứng dụng?". |
+
+---
 
 ## 🎯 Nội dung học tập & Bài học rút ra (Key Learnings)
 
@@ -212,9 +227,8 @@ EXECUTE FUNCTION linh_lab.fn_set_updated_at();
 
 Sản phẩm của bài tập được lưu trữ tại:
 ```
-tasks/ddid12_constraints/DDID12_03_constraints_consistency.sql
+tasks/task_03_constraints/constraints_consistency.sql
 ```
-*(Đồng thời sao lưu một bản tại: `sql/marketing/DDID12_03_constraints_consistency.sql`)*
 
 ---
 

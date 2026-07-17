@@ -1,5 +1,5 @@
 -- ===========================================================================
--- DDID-14 | Bài 5 — Design for Retry (Idempotency) Using Database Upserts
+-- Bài 5 — Design for Retry (Idempotency) Using Database Upserts
 -- ===========================================================================
 -- 🎯 Mục tiêu:
 --    Thiết kế câu truy vấn INSERT có khả năng chạy lại (retry-safe)

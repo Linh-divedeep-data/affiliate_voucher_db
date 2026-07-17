@@ -1,6 +1,6 @@
 -- ============================================================================
--- SQL FILE: DDID11_02_transaction_blocks.sql
--- TASK: Write Multi-Step Transactions with COMMIT, ROLLBACK, and SAVEPOINT
+-- SQL FILE: transaction_blocks.sql
+-- TASK 02: Write Multi-Step Transactions with COMMIT, ROLLBACK, and SAVEPOINT
 -- ============================================================================
 
 SET search_path = linh_lab, public;

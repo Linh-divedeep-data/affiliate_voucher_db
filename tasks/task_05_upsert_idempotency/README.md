@@ -1,17 +1,47 @@
 # 📝 Bài 5 — Design for Retry: Idempotency với Database Upserts
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Mọi pipeline có thể crash phải idempotent** | Bất kỳ pipeline/job nào có khả năng **chạy lại sau khi crash giữa chừng** (ETL, cron job, message consumer, webhook handler) đều phải được thiết kế idempotent ngay từ đầu bằng `ON CONFLICT` — đừng giả định "job này chỉ chạy đúng 1 lần". |
+| **"Nạp dữ liệu từ nguồn ngoài" = cần tự hỏi** | Bất kỳ đâu có nạp dữ liệu (file, API, message queue, webhook) đều cần tự hỏi "nếu job này chạy lại đúng dữ liệu vừa xử lý, có bị lỗi/trùng không?". |
+| **Fact table → DO NOTHING, Dimension → DO UPDATE** | Fact/Event table (dữ liệu bất biến về 1 sự kiện đã xảy ra) → `DO NOTHING`. Dimension table (dữ liệu mô tả có thể đổi theo thời gian) → `DO UPDATE ... EXCLUDED...`. |
+| **Khóa UPSERT phải deterministic** | Khóa dùng để UPSERT phải là **khóa nghiệp vụ ổn định** (natural key hoặc hash deterministic từ nội dung sự kiện) — không bao giờ dùng giá trị sinh ngẫu nhiên (UUID random, `now()`) làm khóa xung đột. |
+| **Idempotency ≠ Concurrency Control** | Đừng nhầm Idempotency (retry theo thời gian) với Concurrency Control (đồng thời, Task 04) — hai cơ chế phòng thủ khác nhau; nếu thao tác không map gọn vào 1 UNIQUE constraint, cân nhắc idempotency key riêng thay vì cố ép vào UPSERT. |
+| **Test "chạy job 2 lần" là tiêu chí nghiệm thu** | Ngay từ lúc thiết kế bất kỳ pipeline ghi dữ liệu nào ở dự án mới — không phải tính năng phụ, mà là điều kiện bắt buộc để nghiệm thu. |
+
+---
+
 ## 🎯 Nội dung học tập & Bài học rút ra (Key Learnings)
 
-Trong Data Engineering, **pipeline ETL/ELT chắc chắn sẽ thất bại** tại một thời điểm nào đó — do mạng timeout, disk đầy, API upstream trả lỗi, hay container bị kill giữa chừng.
+Khi pipeline ETL/ELT bị crash giữa chừng (do lỗi mạng, disk đầy, container chết...), cách thông thường là chạy lại từ đầu.
+Nhưng nếu code dùng lệnh `INSERT` bình thường:
+→ Lần chạy thứ 2 sẽ bị lỗi "dữ liệu đã tồn tại" (`UNIQUE Constraint Violation`) → Pipeline crash tiếp.
 
-Khi pipeline sập giữa chừng, chiến lược phục hồi phổ biến nhất là **chạy lại (retry)**. Tuy nhiên, nếu script SQL dùng `INSERT` thông thường, chạy lại sẽ gặp lỗi `UNIQUE Constraint Violation` → pipeline crash lần 2!
+### Giải pháp: Làm cho pipeline "Idempotent"
 
-Trong bài thực hành này, bạn sẽ học cách:
-1. Nhận diện vấn đề của pipeline "giòn" (fragile) khi dùng `INSERT` thông thường.
-2. Thiết kế câu truy vấn **Idempotent** bằng cú pháp `ON CONFLICT` của PostgreSQL.
-3. Phân biệt khi nào dùng `DO NOTHING` (Event Log) và khi nào dùng `DO UPDATE` (Dimension Table).
+**Idempotent** nghĩa là:
+> "Chạy 1 lần hay 100 lần → kết quả cuối cùng vẫn giống nhau, không lỗi, không trùng lặp."
 
-> **Idempotency** = "Chạy 1 lần hay 10.000 lần → trạng thái cuối cùng của database giống hệt nhau, không lỗi, không trùng dữ liệu."
+### Cách làm trong PostgreSQL
+
+Dùng cú pháp `ON CONFLICT` khi INSERT:
+
+```sql
+INSERT INTO my_table (id, name, value)
+VALUES (1, 'A', 100)
+ON CONFLICT (id) 
+DO NOTHING;           -- Hoặc DO UPDATE
+```
+
+Nghĩa:
+- Nếu `id` chưa tồn tại → Insert bình thường
+- Nếu `id` đã tồn tại →
+  - `DO NOTHING` → Bỏ qua (dùng cho log)
+  - `DO UPDATE` → Cập nhật dữ liệu mới (dùng cho bảng dimension)
 
 ---
 
@@ -110,13 +140,36 @@ VALUES
 
 ---
 
-### Kịch bản B — Pipeline Bất Tử (Bulletproof — Idempotent UPSERT với DO NOTHING)
+### Kịch bản B — Pipeline Bất Tử (Bulletproof Pipeline)
 
-**Bối cảnh:** Click stream là **Event Log bất biến (immutable)**. Một click đã xảy ra = một sự kiện lịch sử → không bao giờ thay đổi. Nếu pipeline retry và gửi lại click đã tồn tại, ta chỉ cần **bỏ qua** (skip) nó.
+Đây là cách viết an toàn, pipeline không sợ crash, chạy lại bao nhiêu lần cũng được.
 
-PostgreSQL cung cấp cú pháp `ON CONFLICT ... DO NOTHING` để xử lý chính xác tình huống này.
+**Bối cảnh đơn giản:**
+- Bạn đang ghi log click (sự kiện người dùng click).
+- Mỗi click là sự kiện lịch sử → Một khi xảy ra thì không thay đổi.
+- Nếu pipeline crash giữa chừng → Chạy lại → Không muốn bị lỗi "dữ liệu đã tồn tại".
 
----
+**Giải pháp:** Dùng `ON CONFLICT ... DO NOTHING`
+
+Thay vì viết INSERT thông thường:
+```sql
+INSERT INTO click_log (...) VALUES (...);   -- Cách cũ, dễ lỗi
+```
+
+Viết kiểu Idempotent (Bất tử):
+```sql
+INSERT INTO click_log (click_id, ...) 
+VALUES ('CLICK_001', ...)
+ON CONFLICT (click_id) 
+DO NOTHING;     -- Nếu click_id đã tồn tại thì BỎ QUA, không lỗi
+```
+
+**Ý nghĩa dễ hiểu:**
+- **Lần chạy 1:** Click mới → Insert bình thường
+- **Pipeline crash → Chạy lại lần 2:**
+  - Click nào chưa có → Insert
+  - Click nào đã có → Bỏ qua (`DO NOTHING`)
+- ✅ Không lỗi, không trùng, pipeline vẫn chạy ngon
 
 **Bước 1 — Refactor sang UPSERT (DO NOTHING)**
 
@@ -189,15 +242,39 @@ WHERE  click_id = 'RETRY_TEST_002';
 
 ---
 
-### Kịch bản C — UPSERT cho Dimension Table (DO UPDATE)
+### Kịch bản C — UPSERT cho Dimension Table
 
-**Bối cảnh:** Khác với Event Log (dữ liệu bất biến), **Dimension Table** chứa dữ liệu **có thể thay đổi** theo thời gian. Ví dụ: đối tác (partner) thay đổi tên, thay đổi commission rule, cập nhật thông tin liên hệ...
+Dimension Table là bảng chứa thông tin **có thể thay đổi** (như thông tin đối tác, khách hàng...).
 
-Khi pipeline retry, nếu partner đã tồn tại VÀ có dữ liệu mới hơn → ta muốn **CẬP NHẬT** dòng cũ, không phải bỏ qua.
+**Ví dụ dễ hình dung:**
 
-PostgreSQL cung cấp `ON CONFLICT ... DO UPDATE SET ... = EXCLUDED...` cho tình huống này.
+Giả sử bạn có bảng `partner` (đối tác):
+- **Lần 1:** Partner "KOL001" có tên là "Nguyễn Văn A", commission 10%
+- **Sau đó** partner đổi tên thành "Nguyễn Văn B", commission lên 15%
 
----
+Khi pipeline chạy lại (retry):
+- Nếu dùng **cách cũ** (`INSERT`): ❌ Lỗi vì đã tồn tại
+- Nếu dùng **`DO NOTHING`**: ⚠️ Bỏ qua → Không cập nhật tên mới và commission mới
+- Nếu dùng **`DO UPDATE`** (Kịch bản C): ✅ Cập nhật thông tin mới nhất (tên thành B, commission 15%)
+
+**Code đơn giản:**
+
+```sql
+INSERT INTO partner (id, name, commission_rate)
+VALUES (1, 'Nguyễn Văn B', 0.15)
+ON CONFLICT (id) 
+DO UPDATE SET 
+    name = EXCLUDED.name,                      -- Cập nhật tên mới
+    commission_rate = EXCLUDED.commission_rate; -- Cập nhật commission mới
+```
+
+> `EXCLUDED` nghĩa là: "Dữ liệu từ lệnh INSERT hiện tại"
+
+**Tóm tắt dễ nhất:**
+- **Event Log** (log click): Dùng `DO NOTHING` (bỏ qua nếu đã có)
+- **Dimension Table** (thông tin đối tác): Dùng `DO UPDATE` (cập nhật thông tin mới)
+
+Kịch bản C là cách để pipeline **cập nhật dữ liệu mới** khi chạy lại, thay vì bỏ qua hoặc lỗi.
 
 **Bước 1 — INSERT lần đầu (Tạo mới partner)**
 

@@ -1,8 +1,21 @@
 # 📘 Task 09 — Data Privacy: Row-Level Security (RLS) & Column-Level Security (CLS)
 
-**Ticket:** DDID-18
+## Kiến thức đạt được
 
-## 📋 Mục tiêu của ticket
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Phân quyền có 2 chiều: cột và dòng** | Bất kỳ khi nào nghe "user A không được xem thông tin nhạy cảm (PII)" → cần CLS (`GRANT SELECT (cols)`); "user A chỉ được xem dữ liệu thuộc phạm vi của mình" → cần RLS (`CREATE POLICY`). Đừng cố nhét cả hai vào 1 cơ chế `GRANT`/`REVOKE` cấp bảng thông thường. |
+| **Dynamic RLS qua bảng mapping, không hard-code N policy** | Dùng 1 policy tra cứu bảng mapping (`user_region_mapping`) thay vì tạo N policy tĩnh cho N vùng/role — thêm quyền mới chỉ là 1 dòng `INSERT`, không cần `ALTER`/deploy lại. |
+| **RLS lớn cần index để không thành nút cổ chai** | Subquery trong policy chạy lại cho mỗi dòng kiểm tra — trên bảng lớn, phải đảm bảo cột dùng trong điều kiện policy có index phù hợp (liên hệ Task 11), nếu không RLS sẽ làm chậm mọi truy vấn của mọi user. |
+| **CLS thất bại bằng lỗi, RLS thất bại bằng im lặng** | Ghi nhớ để không tốn thời gian debug sai hướng: `permission denied` là do CLS; 0 dòng bất thường (không có exception) là dấu hiệu RLS đang lọc. |
+| **Không bao giờ dùng SECURITY DEFINER cho dữ liệu nhạy cảm** | Đây là quy tắc vàng mang theo mọi dự án: `SECURITY DEFINER` chạy quyền owner, có thể vô tình trở thành backdoor bypass RLS — mặc định dùng `SECURITY INVOKER`, chỉ đổi sang `DEFINER` khi có lý do rõ ràng và đã cân nhắc rủi ro. |
+| **Áp dụng ngay khi có yêu cầu "phân quyền theo vai trò/vùng"** | Bất kỳ dự án nào có nhiều loại người dùng cần thấy tập con dữ liệu khác nhau — thiết kế RLS/CLS ngay từ đầu thay vì lọc bằng `WHERE` ở tầng ứng dụng (dễ bị quên/bypass khi có thêm 1 đường truy vấn mới). |
+
+---
+
+## 📋 Mục tiêu
 
 Học cách bảo vệ dữ liệu nhạy cảm trong PostgreSQL bằng 3 kỹ thuật chính:
 

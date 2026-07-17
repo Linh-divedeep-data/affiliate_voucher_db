@@ -1,5 +1,20 @@
 # 📝 Task: Practice Targeted CRUD & Observe the Auto-Commit Trap
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **Autocommit là bẫy mặc định** | Mọi kết nối DB (psql, driver, ORM) tự **autocommit** trừ khi chủ động mở transaction. Hễ thấy ≥ 2 câu `INSERT`/`UPDATE`/`DELETE` cùng phục vụ **một hành động nghiệp vụ duy nhất**, phải bọc chúng trong `BEGIN...COMMIT/ROLLBACK` ngay từ khi viết code đầu tiên — đừng đợi xảy ra sự cố dữ liệu mồ côi rồi mới vá. |
+| **Ghi nối tiếp nhiều bảng phụ thuộc** | Bất kỳ đoạn code nào có dạng "ghi bảng A, rồi dùng kết quả đó ghi tiếp bảng B" (đăng ký user → tạo hồ sơ, tạo đơn hàng → trừ tồn kho, v.v.) đều tiềm ẩn đúng rủi ro autocommit-trap này, bất kể ngôn ngữ hay ORM nào. |
+| **RETURNING thay vì SELECT lại** | Dùng `RETURNING` (Postgres) hoặc cơ chế tương đương của DB khác để lấy ID/giá trị sinh tự động ngay trong câu ghi, tránh phải `SELECT` lại — giảm 1 round-trip và loại bỏ khoảng hở race condition. |
+| **RESTRICT vs CASCADE cho FK** | Mặc định chọn `RESTRICT` cho quan hệ cha-con quan trọng về nghiệp vụ; chỉ dùng `CASCADE` khi đã đánh giá rõ "blast radius" (xóa cha kéo theo tối đa bao nhiêu dòng con) và chấp nhận được rủi ro đó. |
+| **Test "lỗi bước N thì sao?"** | Trước khi merge bất kỳ script/migration/job nào có nhiều bước ghi, tự hỏi "nếu bước thứ N lỗi, các bước 1..N-1 đã chạy có gây hại gì không?" — nếu có, bắt buộc phải có transaction bao ngoài. |
+| **Áp dụng ngay từ dòng code đầu tiên** | Ngay từ dòng code đầu tiên của bất kỳ luồng ghi dữ liệu nhiều bước nào ở dự án tiếp theo — coi `BEGIN...COMMIT` là mặc định cần cân nhắc, không phải thứ "thêm vào sau nếu cần". |
+
+---
+
 Tài liệu này ghi lại chi tiết các bước thực hiện, khái niệm cốt lõi và các bài học kinh nghiệm rút ra từ việc thực hành các thao tác CRUD có mục tiêu, xử lý lỗi Foreign Key RESTRICT và hiểu rõ cơ chế Auto-commit/Transaction trong PostgreSQL.
 
 ---
@@ -198,5 +213,5 @@ ORDER BY entity_type, status_code;
 ### 2. Trách nhiệm Dọn dẹp bản ghi:
 * **Không phải Database:** Database đã làm việc hoàn toàn đúng theo thiết kế. Nó nhận lệnh đơn lẻ, lưu trữ thành công và cam kết lưu vĩnh viễn (thuộc tính Durability trong ACID). Database không thể tự đoán biết được logic nghiệp vụ là hai câu lệnh đó phải đi liền với nhau.
 * **Trách nhiệm thuộc về Ứng dụng (Application / Developer):**
-  * **Người dọn dẹp:** Lập trình viên phải viết script thủ công để xóa bản ghi rác (như script `Cleanup` trong `DDID10_01_crud_operations.sql`).
+  * **Người dọn dẹp:** Lập trình viên phải viết script thủ công để xóa bản ghi rác (như script `Cleanup` trong `crud_operations.sql`).
   * **Giải pháp phòng ngừa:** Lập trình viên bắt buộc phải thiết lập ứng dụng bọc các tác vụ đa bước trong các khối Transaction rõ ràng (`BEGIN ... COMMIT / ROLLBACK`), đảm bảo tính nguyên tử tuyệt đối cho luồng dữ liệu.

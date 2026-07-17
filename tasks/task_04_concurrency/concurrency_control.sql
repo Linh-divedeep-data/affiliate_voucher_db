@@ -1,6 +1,6 @@
 -- ============================================================================
--- TASK: DDID-13 · Concurrency Control & Race Conditions (Kiểm soát Tranh chấp & Race Conditions)
--- DELIVERABLE: tasks/ddid13_concurrency/DDID13_04_concurrency_control.sql
+-- TASK 04 · Concurrency Control & Race Conditions (Kiểm soát Tranh chấp & Race Conditions)
+-- DELIVERABLE: tasks/task_04_concurrency/concurrency_control.sql
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -181,7 +181,7 @@ UPDATE linh_lab.voucher SET total_issued = 0 WHERE voucher_id = 1;
 
 -- [Bước 3]: Chạy pgbench để mô phỏng 100 users đồng thời, mỗi user click 5 lần (tổng 500 requests):
 -- Lệnh shell (chạy trên Terminal máy tính):
--- pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/ddid13_concurrency/flash_sale_test.sql
+-- pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/task_04_concurrency/flash_sale_test.sql
 
 -- [Bước 4]: Xác minh kết quả trên Database
 -- Kết quả total_issued phải đạt đúng 500. Không có cập nhật nào bị ghi đè hay mất!

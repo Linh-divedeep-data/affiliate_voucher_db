@@ -1,5 +1,20 @@
 # 📝 Write Multi-Step Transactions with COMMIT, ROLLBACK, and SAVEPOINT
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **SAVEPOINT khoanh vùng lỗi cục bộ** | Khi một luồng nghiệp vụ có **1 bước chính bắt buộc thành công** và **1 hoặc nhiều bước phụ được phép thất bại độc lập**, đừng để lỗi của bước phụ hủy luôn bước chính — dùng `SAVEPOINT` để khoanh vùng đúng phạm vi có thể rollback. |
+| **"Core action + side effect optional"** | Bất kỳ luồng nào có dạng đó — đăng ký user + gửi email chào mừng, tạo đơn hàng + áp mã giảm giá, ghi log + gọi webhook bên thứ ba — đều là ứng viên cho pattern `SAVEPOINT`, vì side effect thất bại không nên làm hỏng core action. |
+| **RETURNING chaining tái sử dụng** | Output bước trước làm input bước sau, không cần `SELECT` phụ — áp dụng được cho mọi chuỗi ghi có phụ thuộc dữ liệu, không riêng gì dự án này. |
+| **Câu hỏi quyết định có cần SAVEPOINT** | Tự hỏi "nếu bước X lỗi, các bước còn lại của luồng có nên tiếp tục không?" — nếu có → đặt `SAVEPOINT` trước bước X; nếu không (lỗi X phải hủy tất cả) → không cần savepoint, để lỗi tự propagate lên `ROLLBACK` toàn bộ. |
+| **Luôn ROLLBACK TO SAVEPOINT sau khi bắt lỗi** | Ngay trong cùng khối bắt lỗi (try/catch) — quên bước này khiến cả transaction rơi vào trạng thái *aborted*, mọi câu lệnh sau đó bị từ chối dù chưa hề lỗi. |
+| **Đặt câu hỏi savepoint ngay từ thiết kế** | Ngay khi thiết kế bất kỳ luồng ghi dữ liệu nào có bước phụ "có thể chấp nhận thất bại" — không phải sau khi gặp bug hủy nhầm luồng chính. |
+
+---
+
 Tài liệu này hướng dẫn chi tiết về cách thiết lập giao dịch đa bước (multi-step transactions) trong PostgreSQL, sử dụng `BEGIN`, `COMMIT`, `ROLLBACK`, xâu chuỗi ID qua `RETURNING` và phục hồi từng phần bằng `SAVEPOINT`.
 
 ---

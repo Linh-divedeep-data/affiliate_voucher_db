@@ -1,15 +1,27 @@
 # 🎫 Affiliate Voucher Database Engine (High-Concurrency PostgreSQL)
 
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%2015%2B-blue?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Architecture](https://img.shields.io/badge/Architecture-ACID%20%26%20Concurrency-red?style=for-the-badge)](https://github.com/)
-[![Performance](https://img.shields.io/badge/Performance-Stress%20Tested%20(pgbench)-success?style=for-the-badge)](https://github.com/)
-[![Industry](https://img.shields.io/badge/Industry-E--Commerce-orange?style=for-the-badge)](https://github.com/)
+[![Architecture](https://img.shields.io/badge/Architecture-ACID%20%26%20Concurrency-red?style=for-the-badge)](https://github.com/Linh-divedeep-data/affiliate_voucher_db)
+[![Security](https://img.shields.io/badge/Security-RLS%20%26%20CLS-success?style=for-the-badge)](tasks/task_09_data_privacy/README.md)
+[![Industry](https://img.shields.io/badge/Industry-E--Commerce-orange?style=for-the-badge)](https://github.com/Linh-divedeep-data/affiliate_voucher_db)
 
 ## 📖 Tổng Quan
 
-**Affiliate Voucher Database Engine** là hệ thống cơ sở dữ liệu quan hệ cấp production được xây dựng trên **PostgreSQL 15+**, mô phỏng quy trình quản lý chương trình Tiếp thị Liên kết (Affiliate Marketing) và Phát hành Voucher cho một doanh nghiệp thương mại điện tử mỹ phẩm tại Việt Nam.
+**Affiliate Voucher Database Engine** là dự án cá nhân mô phỏng hệ thống cơ sở dữ liệu quan hệ cấp production trên **PostgreSQL 15+**, cho quy trình quản lý chương trình Tiếp thị Liên kết (Affiliate Marketing) và Phát hành Voucher của một doanh nghiệp thương mại điện tử mỹ phẩm tại Việt Nam.
 
-Dự án tập trung chứng minh cách **bảo vệ tính nhất quán dữ liệu**, **ngăn chặn thất thoát ngân sách khuyến mãi**, và **xử lý hàng trăm request đồng thời trong Flash Sale** chỉ bằng các cơ chế bảo vệ ở tầng Database (Constraints, Triggers, Isolation Levels) — không phụ thuộc vào tầng ứng dụng.
+Dự án gồm **11 bài thực hành (tasks)** đi từ nền tảng đến nâng cao, chứng minh cách **bảo vệ tính nhất quán dữ liệu**, **ngăn chặn thất thoát ngân sách khuyến mãi**, **xử lý hàng trăm request đồng thời trong Flash Sale**, **bảo mật dữ liệu theo vai trò (RLS/CLS)**, và **tối ưu hiệu năng cho bảng dữ liệu lớn (Index/Partition)** — chỉ bằng các cơ chế ở tầng Database (Constraints, Triggers, Isolation Levels, Row/Column-Level Security), không phụ thuộc vào tầng ứng dụng.
+
+## 📑 Mục Lục
+
+- [Bối Cảnh Doanh Nghiệp & Bài Toán Cần Giải Quyết](#-bối-cảnh-doanh-nghiệp--bài-toán-cần-giải-quyết)
+- [Triết Lý Thiết Kế](#-triết-lý-thiết-kế-tính-nhất-quán-consistency-bằng-ràng-buộc-cơ-sở-dữ-liệu)
+- [Kiến Trúc Hệ Thống (ERD)](#-kiến-trúc-hệ-thống-entity-relationship-diagram)
+- [Cấu Trúc Thư Mục Dự Án](#-cấu-trúc-thư-mục-dự-án)
+- [Chi Tiết Từng Bài Thực Hành (Task 1 → 11)](#-chi-tiết-từng-bài-thực-hành)
+- [Yêu Cầu Hệ Thống](#-yêu-cầu-hệ-thống-prerequisites)
+- [Hướng Dẫn Khởi Chạy Nhanh](#-hướng-dẫn-khởi-chạy-nhanh-quick-start)
+- [Tài Liệu Bổ Sung](#-tài-liệu-bổ-sung)
+- [Tác Giả](#-tác-giả)
 
 ---
 
@@ -265,22 +277,21 @@ erDiagram
 
 ```text
 ├── database/
-│   ├── DDL.sql                  # Định nghĩa Schema, Tables, Constraints, Indexes
-│   └── seed.sql                 # Dữ liệu mẫu cho các kịch bản kiểm thử
-└── tasks/
-    ├── task_01_crud_autocommit/
-    │   ├── crud_operations.sql
-    │   └── README.md
-    ├── task_02_transactions/
-    │   ├── transaction_blocks.sql
-    │   └── README.md
-    ├── task_03_constraints/
-    │   ├── constraints_consistency.sql
-    │   └── README.md
-    └── task_04_concurrency/
-        ├── concurrency_control.sql
-        ├── flash_sale_test.sql   # Script SQL dùng cho pgbench stress test
-        └── README.md
+│   ├── DDL.sql                        # Định nghĩa Schema, Tables, Constraints, Indexes
+│   └── seed.sql                       # Dữ liệu mẫu cho các kịch bản kiểm thử
+├── tasks/
+│   ├── task_01_crud_autocommit/       # CRUD & Bẫy Autocommit
+│   ├── task_02_transactions/          # Transactions & Savepoints
+│   ├── task_03_constraints/           # Constraints & Triggers
+│   ├── task_04_concurrency/           # Concurrency Control & pgbench Stress Test
+│   ├── task_05_upsert_idempotency/    # Idempotent Upserts cho pipeline ETL/ELT
+│   ├── task_06_data_auditing_cdc/     # Data Auditing / Change Data Capture (CDC)
+│   ├── task_07_advanced_procedures/   # Stored Procedures & Table-Valued Functions
+│   ├── task_08_isolation_levels/      # Isolation Levels & Read Phenomena
+│   ├── task_09_data_privacy/          # Row-Level & Column-Level Security (RLS/CLS)
+│   ├── task_10_generate_string/       # Dynamic SQL — sinh WHERE clause từ config
+│   └── task_11_index_partition/       # Indexing (B-Tree/Partial) & Table Partitioning (RANGE)
+│       └── (mỗi thư mục gồm 1+ file .sql và 1 README.md hướng dẫn chi tiết)
 ```
 
 ---
@@ -367,13 +378,93 @@ pgbench -U postgres -d postgres -c 100 -t 5 -f tasks/task_04_concurrency/flash_s
 ```sql
 SELECT total_issued, issuance_limit FROM linh_lab.voucher WHERE voucher_id = 1;
 ```
-> `total_issued` tăng đúng bằng số giao dịch thành công và **tuyệt đối không vượt quá** `issuance_limit` — nhờ bảo vệ kép: khóa bi quan (`FOR UPDATE`) + ràng buộc cứng (`chk_total_issued`).
+> `total_issued` tăng đúng bằng số giao dịch thành công và **tuyệt đối không vượt quá** `issuance_limit` — nhờ bảo vệ kép: khóa bi quan (`FOR UPDATE`) + ràng buộc cứng (`chk_total_issued`). TPS thực tế phụ thuộc vào máy chạy benchmark — hãy tự chạy lệnh trên và ghi lại con số của bạn thay vì tin vào số liệu người khác công bố.
 
 #### Kịch Bản F — Giám Sát & Cảnh Báo (Mở Rộng)
 
 **Ý tưởng:** Sử dụng `pg_notify` của PostgreSQL kết hợp một watcher đơn giản (Node.js / Python) để gửi cảnh báo real‑time khi quota voucher sắp cạn kiệt. *(Bài tập mở rộng cho người đọc.)*
 
 📖 [Xem phân tích chi tiết →](tasks/task_04_concurrency/README.md)
+
+---
+
+### Bài 5 — Thiết Kế Cho Retry: Idempotency Với Database Upserts
+
+**Mục tiêu:** Đảm bảo pipeline ETL/ELT có thể **chạy lại an toàn** sau khi crash giữa chừng (lỗi mạng, disk đầy, container chết...) mà không tạo dữ liệu trùng lặp hay ném lỗi `UNIQUE constraint violation`.
+
+**Kỹ thuật sử dụng:** `INSERT ... ON CONFLICT (key) DO NOTHING / DO UPDATE` — biến một `INSERT` thông thường (chỉ chạy đúng 1 lần) thành thao tác **idempotent** (chạy 1 lần hay 100 lần, kết quả cuối cùng vẫn giống nhau).
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_05_upsert_idempotency/README.md)
+
+---
+
+### Bài 6 — Data Auditing: Change Data Capture (CDC) Sơ Khai
+
+**Mục tiêu:** Không để dữ liệu cũ "mất mãi mãi" mỗi khi có `UPDATE` — ví dụ khi ngân sách khuyến mãi bị sửa từ 50 triệu → 500 triệu, cột `updated_at` chỉ biết "có thay đổi", không biết giá trị cũ là gì.
+
+**Kỹ thuật sử dụng:** Bảng lịch sử (`promotion_program_history`) + `TRIGGER trg_audit_promotion_program` tự động sao chép bản ghi cũ trước mỗi lần `UPDATE`, tạo ra một audit trail đầy đủ để tra cứu hoặc khôi phục.
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_06_data_auditing_cdc/README.md)
+
+---
+
+### Bài 7 — Advanced Data Orchestration & Dynamic Reporting
+
+**Mục tiêu:** Đóng gói các quy trình nghiệp vụ nhiều bước (đọc → tính toán → ghi → thông báo) trực tiếp vào database engine, tránh round‑trip mạng và tránh "partial failure" khi Backend xử lý dở dang.
+
+**Kỹ thuật sử dụng:**
+- `PROCEDURE` (gọi bằng `CALL`) với `EXCEPTION WHEN OTHERS` để tự động rollback khi lỗi — dùng cho quy trình chốt sổ hoa hồng cuối tháng.
+- `FUNCTION ... RETURNS TABLE` (gọi bằng `SELECT`) cho báo cáo KPI động, nhận tham số dạng mảng (`BIGINT[]` + `ANY()`).
+- Bonus: `REFCURSOR` như một phương án thay thế cho `RETURNS TABLE`.
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_07_advanced_procedures/README.md)
+
+---
+
+### Bài 8 — Isolation Levels & Read Phenomena
+
+**Mục tiêu:** Hiểu cách PostgreSQL dùng **MVCC** (Multi‑Version Concurrency Control) để xử lý đọc/ghi đồng thời, và 4 hiện tượng đọc sai lệch có thể xảy ra: Dirty Read, Non‑Repeatable Read, Phantom Read, Lost Update.
+
+**Kỹ thuật sử dụng:** So sánh 4 mức `ISOLATION LEVEL` (`READ COMMITTED`, `REPEATABLE READ`, `SERIALIZABLE`, ...) bằng kịch bản 2‑Terminal, quan sát trực tiếp hiện tượng nào bị chặn ở mức nào.
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_08_isolation_levels/README.md) · [Bảng phân tích Read Phenomena →](tasks/task_08_isolation_levels/read_phenomena.md)
+
+---
+
+### Bài 9 — Data Privacy: Row-Level Security (RLS) & Column-Level Security (CLS)
+
+**Mục tiêu:** Data Analyst được xem báo cáo khách hàng nhưng **không được xem** các cột PII (email, số điện thoại) và **chỉ được xem** dữ liệu thuộc vùng miền mình phụ trách.
+
+**Kỹ thuật sử dụng:**
+- **CLS** — `REVOKE ALL` + `GRANT SELECT (col1, col2, ...)` để chặn truy cập ở tầng cột (vi phạm → lỗi `permission denied`).
+- **RLS** — `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY ... USING (...)` với bảng mapping user↔region (vi phạm → dòng dữ liệu im lặng biến mất, không lỗi).
+- Quy tắc vàng: function truy cập dữ liệu nhạy cảm luôn dùng `SECURITY INVOKER`, **không bao giờ** `SECURITY DEFINER` (tránh xuyên thủng RLS).
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_09_data_privacy/README.md)
+
+---
+
+### Bài 10 — Dynamic SQL: Sinh WHERE Clause Từ Bảng Config
+
+**Mục tiêu:** Thay vì hard‑code hàng trăm `IF/ELSE` phân quyền truy vấn theo từng người dùng trong code ứng dụng, sinh mệnh đề `WHERE` tự động từ một bảng cấu hình — thêm người dùng mới chỉ cần `INSERT`, không cần deploy lại code.
+
+**Kỹ thuật sử dụng:** `string_to_array` + `FOREACH ... IN ARRAY` để tách chuỗi CSV, tự động chọn `IN` / `LIKE` / `=` tùy giá trị, tra cứu `information_schema.columns` để xác nhận cột tồn tại, và xử lý ký tự đại diện (`*`) theo thứ tự ưu tiên.
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_10_generate_string/README.md)
+
+---
+
+### Bài 11 — Indexing & Table Partitioning cho Bảng Dữ Liệu Lớn
+
+**Mục tiêu:** Sau vài tháng vận hành, `partner_click` tăng lên hàng triệu dòng khiến báo cáo ở Task 07 (`fn_partner_performance_report`, `sp_reconcile_partner_payout`) ngày càng chậm. Chứng minh bằng `EXPLAIN ANALYZE` cách Index và Partitioning giải quyết vấn đề này.
+
+**Kỹ thuật sử dụng:**
+- **B-Tree Index đa cột** đúng thứ tự (equality trước, range sau) và quy tắc **Leftmost Prefix**.
+- **Partial Index** — chỉ index đúng tập con dữ liệu nghiệp vụ cần (kế thừa pattern `idx_voucher_program ... WHERE is_deleted = FALSE` có sẵn trong `database/DDL.sql`).
+- Phát hiện **index thừa** bằng `pg_stat_user_indexes`.
+- **Table Partitioning** (`PARTITION BY RANGE`) theo tháng + **Partition Pruning**, và `ATTACH`/`DETACH PARTITION` để dọn dữ liệu cũ gần như tức thời — hiện thực hóa câu trả lời cho câu hỏi mở ở Task 06 về cách dọn `promotion_program_history` phình to.
+
+📖 [Xem hướng dẫn chi tiết →](tasks/task_11_index_partition/README.md)
 
 ---
 
@@ -401,16 +492,33 @@ psql -U postgres -d postgres -f database/seed.sql
 
 **Bước 3:** Chạy kiểm thử tải Flash Sale (xem Kịch Bản E ở trên)
 
----
-
-## ✨ Tại Sao Dự Án Này Đạt Chuẩn Portfolio
-
-- ✅ **Giải pháp end‑to‑end** cho bài toán thực tế trong ngành E‑commerce.
-- ✅ **Mọi quy tắc nghiệp vụ đều được bảo vệ ở tầng Database** — không phụ thuộc application code.
-- ✅ **Kiểm thử hiệu năng thực tế** với `pgbench` (≥ 7 800 TPS trên laptop).
-- ✅ **Tài liệu cấp phỏng vấn** — bao gồm ERD, giải thích design pattern, và bài thực hành từng bước.
-- ✅ **Dễ clone, chạy, và mở rộng** — phù hợp để chia sẻ trên GitHub.
+**Bước 4 (tuỳ chọn):** Khám phá Task 5 → 10 — mỗi thư mục trong `tasks/` độc lập, có thể chạy theo thứ tự bất kỳ sau khi đã có Schema + Seed data ở Bước 1‑2.
 
 ---
 
-*© 2026 Affiliate Voucher DB — All rights reserved.*
+## 📚 Tài Liệu Bổ Sung
+
+- Mỗi thư mục trong `tasks/` có `README.md` riêng, trình bày theo cấu trúc: **Bối cảnh → Giải pháp → Kỹ thuật SQL → Kết quả kiểm chứng**.
+
+---
+
+## ✨ Điểm Nổi Bật Của Dự Án
+
+- ✅ **Giải pháp end‑to‑end** cho bài toán thực tế trong ngành E‑commerce, từ CRUD cơ bản đến bảo mật dữ liệu theo vai trò.
+- ✅ **Mọi quy tắc nghiệp vụ đều được bảo vệ ở tầng Database** (Constraints, Triggers, Isolation Levels, RLS/CLS) — không phụ thuộc application code.
+- ✅ **Kiểm thử tải thực tế** với `pgbench` — script và hướng dẫn tái lập có sẵn tại [task_04_concurrency](tasks/task_04_concurrency/).
+- ✅ **11 bài thực hành có tài liệu đầy đủ** — ERD, giải thích design pattern, và hướng dẫn từng bước, phù hợp ôn tập phỏng vấn Data Engineer.
+- ✅ **Dễ clone, chạy, và mở rộng** — chỉ cần PostgreSQL 15+ và `psql`.
+
+---
+
+## 👤 Tác Giả
+
+Được xây dựng và duy trì bởi **Linh — DiveDeep Data**, như một dự án cá nhân để thực hành và trình bày các kỹ thuật PostgreSQL nâng cao trong bối cảnh E‑commerce/Affiliate Marketing.
+
+- GitHub: [@Linh-divedeep-data](https://github.com/Linh-divedeep-data)
+- Repository: [affiliate_voucher_db](https://github.com/Linh-divedeep-data/affiliate_voucher_db)
+
+---
+
+*© 2026 Affiliate Voucher DB — Released under the MIT License.*

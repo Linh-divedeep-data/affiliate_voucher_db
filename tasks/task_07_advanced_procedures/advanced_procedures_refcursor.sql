@@ -1,5 +1,5 @@
 -- ===========================================================================
--- DDID-16 | Bài 7 (BONUS) — REFCURSOR: Cách Thay Thế cho RETURNS TABLE
+-- Bài 7 (BONUS) — REFCURSOR: Cách Thay Thế cho RETURNS TABLE
 -- ===========================================================================
 --
 -- 📖 REFCURSOR LÀ GÌ?

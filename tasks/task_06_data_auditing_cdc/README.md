@@ -1,18 +1,52 @@
 # 📝 Bài 6 — Data Auditing: Primitive Change Data Capture (CDC)
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **`updated_at` không đủ, cần History Table** | Với bất kỳ bảng nào chứa dữ liệu "có thể bị sửa và việc biết giá trị cũ là quan trọng" (cấu hình, ngân sách, trạng thái hợp đồng...), đừng chỉ dựa vào cột `updated_at` — nó chỉ nói "có đổi", không nói "đổi từ đâu". Cần History Table + Trigger `AFTER UPDATE` để giữ lại giá trị cũ. |
+| **Câu hỏi nghiệp vụ báo hiệu cần audit trail** | Dạng "nếu nhân viên sửa nhầm thì sao?", "làm sao biết ai đã đổi giá trị này?", "có cần khôi phục lại bản trước không?" — mỗi câu như vậy là tín hiệu cần audit trail, bất kể domain của dự án là gì. |
+| **IS DISTINCT FROM & AFTER UPDATE** | `IS DISTINCT FROM` (không phải `<>`) khi so sánh `OLD`/`NEW` trong trigger — xử lý đúng trường hợp giá trị liên quan tới `NULL`; luôn dùng `AFTER` (không `BEFORE`) cho trigger ghi log, tránh ghi lại cả thay đổi bị hủy sau đó. |
+| **Trigger-based vs WAL-based CDC** | Trigger-based (đơn giản, đủ cho dự án vừa và nhỏ) vs WAL-based/Debezium (khi cần tách hẳn audit khỏi latency đường ghi chính hoặc cần real-time) — chọn theo quy mô ghi và yêu cầu độ trễ, không mặc định chọn cái phức tạp hơn nếu chưa cần. |
+| **Bảng history cần chiến lược dọn dẹp ngay từ đầu** | Phải có kế hoạch archival/partition theo thời gian ngay từ khi tạo bảng history — nếu không, bảng sẽ phình to vô hạn và làm chậm cả ghi lẫn đọc sau vài năm (xem Task 11 — Partitioning). |
+| **Mặc định thêm audit trail khi thiết kế schema mới** | Với bất kỳ bảng nào lưu "cấu hình/trạng thái quan trọng có thể bị sửa" ở dự án mới — thêm audit trail ngay từ đầu thay vì chỉ thêm `updated_at` rồi tính sau. |
+
+---
+
 ## 🎯 Nội dung học tập & Bài học rút ra (Key Learnings)
 
-Ở Bài 3 (Constraints & Triggers), chúng ta đã tạo trigger tự động cập nhật cột `updated_at`. Tuy nhiên, cách tiếp cận đó có một **lỗ hổng nghiêm trọng cho dữ liệu tài chính**: nó **ghi đè giá trị cũ**!
+**Nội dung chính:**
 
-**Ví dụ thực tế:** Nếu một nhân viên gian lận thay đổi ngân sách khuyến mãi từ **50 triệu** lên **500 triệu**, cột `updated_at` chỉ cho biết *khi nào* thay đổi xảy ra, nhưng giá trị gốc "50 triệu" đã **mất vĩnh viễn**!
+Khi bạn UPDATE dữ liệu (ví dụ: thay đổi ngân sách khuyến mãi), thông tin cũ sẽ bị mất mãi mãi nếu chỉ có cột `updated_at`.
+Task này dạy bạn cách lưu lịch sử thay đổi để sau này có thể xem lại hoặc khôi phục dữ liệu cũ.
 
-Trong bài thực hành này, bạn sẽ học cách:
-1. Tạo **History Table** (Bảng Lịch Sử) chuyên lưu trữ giá trị CŨ trước mỗi lần UPDATE.
-2. Viết **Trigger Function** PL/pgSQL truy cập biến đặc biệt `OLD` (giá trị trước khi update).
-3. Gắn **AFTER UPDATE Trigger** vào bảng gốc — chỉ ghi audit khi UPDATE thực sự thành công.
-4. Dùng History Table để **phục hồi dữ liệu gốc** (rollback thủ công).
+### Vấn đề thực tế
 
-> **Change Data Capture (CDC)** = Bắt giữ mọi thay đổi dữ liệu. Đây là kỹ thuật nền tảng trước khi học các tool CDC hiện đại (Debezium, Kafka Connect).
+Giả sử nhân viên thay đổi ngân sách khuyến mãi từ 50 triệu → 500 triệu:
+- Cột `updated_at` chỉ ghi "đã thay đổi lúc 14h30"
+- Nhưng giá trị cũ **50 triệu** thì **mất hoàn toàn**
+- Sau này muốn xem lịch sử hoặc rollback → Không có dữ liệu cũ
+
+### Giải pháp trong task này
+
+Bạn sẽ học cách:
+1. Tạo **History Table** (bảng lưu lịch sử) — lưu bản sao dữ liệu cũ trước khi update.
+2. Viết **Trigger Function** — tự động chạy mỗi khi UPDATE xảy ra.
+3. Gắn **Trigger** vào bảng gốc — để tự động lưu lịch sử.
+4. Dùng History Table để **khôi phục dữ liệu cũ** nếu cần.
+
+### Change Data Capture (CDC)
+
+Đây là kỹ thuật **bắt giữ mọi thay đổi** của dữ liệu.
+- **Trong bài này:** Dùng Trigger + History Table (cách thủ công)
+- **Sau này sẽ học tool hiện đại:** Debezium, Kafka Connect...
+
+> **Tóm tắt dễ nhớ:**
+> Mỗi lần UPDATE, đừng để dữ liệu cũ biến mất.
+> Hãy tạo bảng lịch sử để lưu lại phiên bản cũ trước khi thay đổi.
+> Đây là kỹ năng quan trọng trong Data Engineering để audit (kiểm toán) và khôi phục dữ liệu.
 
 ---
 
@@ -37,9 +71,12 @@ Kiến trúc Data Engineering hiện đại thường dùng tool bên ngoài (De
 
 ## 🔬 Chi tiết các Bước Thực hành
 
+Khi bạn UPDATE dữ liệu (ví dụ: thay đổi ngân sách khuyến mãi), thông tin cũ sẽ bị mất.
+Task này dạy bạn cách lưu lịch sử thay đổi (audit trail) để sau này có thể xem lại hoặc khôi phục.
+
 ### Bước 1 — Tạo History Table (Bảng Lịch Sử)
 
-🎯 **Mục đích:** Tạo bảng chuyên dụng lưu trữ trạng thái CŨ của `promotion_program` trước mỗi lần UPDATE. Đây là "sổ nhật ký" ghi lại mọi thay đổi — khác với cột `updated_at` chỉ biết "khi nào" nhưng không biết "giá trị cũ là gì".
+🎯 **Mục đích:** Tạo một bảng riêng chỉ để lưu trạng thái CŨ trước mỗi lần UPDATE.
 
 ```sql
 CREATE TABLE IF NOT EXISTS linh_lab.promotion_program_history (
@@ -64,24 +101,15 @@ CREATE INDEX IF NOT EXISTS idx_history_program
     ON linh_lab.promotion_program_history(program_id, changed_at DESC);
 ```
 
-**Giải thích thiết kế:**
-
-| Cột | Ý nghĩa |
-|---|---|
-| `history_id` | PK tự tăng — mỗi lần UPDATE tạo 1 dòng mới |
-| `program_id` | FK trỏ về bảng gốc — biết dòng nào bị thay đổi |
-| `old_*` | Các cột lưu giá trị **TRƯỚC KHI** update |
-| `changed_at` | Thời điểm thay đổi xảy ra |
-| `changed_by` | Ai đã thực hiện thay đổi |
-| `change_type` | Loại thay đổi (`UPDATE`, có thể mở rộng `DELETE`) |
-
-> **Lưu ý:** Prefix `old_` giúp phân biệt rõ đây là giá trị CŨ, tránh nhầm lẫn với giá trị hiện tại trong bảng gốc.
+**Tại sao cần bảng riêng?**
+- Bảng gốc (`promotion_program`) chỉ giữ dữ liệu **hiện tại**
+- Bảng history giữ **tất cả phiên bản cũ** → như "sổ nhật ký" của bảng
 
 ---
 
-### Bước 2 — Tạo Trigger Function (Hàm Kiểm Toán)
+### Bước 2 — Tạo Trigger Function (Hàm tự động)
 
-🎯 **Mục đích:** Viết hàm PL/pgSQL truy cập biến đặc biệt `OLD` (chứa toàn bộ giá trị của dòng **TRƯỚC KHI** update) và INSERT vào history table. Hàm còn kiểm tra `IS DISTINCT FROM` để chỉ ghi audit khi có thay đổi thực sự — tránh tạo "rác" khi UPDATE không đổi giá trị.
+🎯 **Mục đích:** Viết hàm tự động chạy mỗi khi có UPDATE trên bảng gốc.
 
 ```sql
 CREATE OR REPLACE FUNCTION linh_lab.fn_audit_promotion_program()
@@ -120,18 +148,21 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-**Giải thích biến đặc biệt OLD vs NEW:**
+**Giải thích biến `OLD` và `NEW`:**
+- `OLD`: Chứa toàn bộ dữ liệu **cũ** trước khi UPDATE
+- `NEW`: Chứa dữ liệu **mới** sau khi UPDATE
+- Trigger lấy dữ liệu từ `OLD` để lưu vào history table.
 
-| Biến | Chứa gì | Ví dụ |
-|---|---|---|
-| `OLD.budget_limit` | Giá trị **TRƯỚC** khi UPDATE | `50,000,000` |
-| `NEW.budget_limit` | Giá trị **SAU** khi UPDATE | `999,000,000` |
-| `OLD.*` | Toàn bộ dòng cũ | Dùng để lưu vào history |
-| `NEW.*` | Toàn bộ dòng mới | Dùng để ghi vào bảng gốc |
+**`IS DISTINCT FROM` là gì?**
+- Kiểm tra "có thay đổi thật sự không"
+- Nếu ai đó UPDATE nhưng không đổi giá trị gì → Trigger sẽ bỏ qua, không tạo bản ghi rác.
 
-**Tại sao kiểm tra `IS DISTINCT FROM`?**
-- Nếu ai đó chạy `UPDATE ... SET budget_limit = budget_limit` (không đổi gì), trigger vẫn chạy
-- `IS DISTINCT FROM` phát hiện "không có gì thay đổi" → skip → tránh tạo history record thừa
+> **Tóm tắt dễ nhớ:**
+> - Tạo bảng lịch sử riêng để lưu dữ liệu cũ
+> - Viết trigger tự động chạy khi UPDATE → copy dữ liệu cũ sang bảng history
+> - Nhờ vậy, bạn luôn biết **trước update là gì**, **sau update là gì**, và **ai thay đổi**
+>
+> Đây là kỹ thuật **Audit Trail** cơ bản trong database.
 
 ---
 

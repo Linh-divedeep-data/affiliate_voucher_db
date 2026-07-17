@@ -1,7 +1,6 @@
 -- ============================================================================
 -- 📘 TASK 09 — Data Privacy: Row-Level Security (RLS) & Column-Level Security (CLS)
 -- ============================================================================
--- Ticket: DDID-18
 -- Mục tiêu: Bảo vệ dữ liệu nhạy cảm (PII) bằng CLS và phân quyền dữ liệu
 --           theo vùng miền bằng RLS trong PostgreSQL.
 -- ============================================================================

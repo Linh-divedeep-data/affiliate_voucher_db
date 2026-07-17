@@ -1,6 +1,6 @@
 -- ============================================================================
--- SQL FILE: DDID10_01_crud_operations.sql
--- TASK: Practice Targeted CRUD & Observe the Auto-Commit Trap
+-- SQL FILE: crud_operations.sql
+-- TASK 01: Practice Targeted CRUD & Observe the Auto-Commit Trap
 -- ============================================================================
 
 SET search_path = linh_lab, public;

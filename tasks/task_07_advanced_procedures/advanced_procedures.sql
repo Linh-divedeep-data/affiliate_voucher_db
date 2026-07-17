@@ -1,5 +1,5 @@
 -- ===========================================================================
--- DDID-16 | Bài 7 — Advanced Data Orchestration & Dynamic Reporting
+-- Bài 7 — Advanced Data Orchestration & Dynamic Reporting
 -- ===========================================================================
 -- 🎯 Mục tiêu:
 --    1. Đóng gói quy trình nghiệp vụ phức tạp (Reconciliation) vào
@@ -99,7 +99,11 @@ BEGIN
     RAISE INFO '   Total Payout: % VND', v_total_payout;
     RAISE INFO '══════════════════════════════════════════════════';
 
-    COMMIT;
+    -- Lưu ý: KHÔNG cần COMMIT ở đây.
+    -- Khi dùng EXCEPTION block, PostgreSQL tạo subtransaction (savepoint).
+    -- COMMIT bên trong subtransaction sẽ gây lỗi:
+    --   "cannot commit while a subtransaction is active"
+    -- PostgreSQL tự auto-commit khi CALL kết thúc thành công.
 
 EXCEPTION
     WHEN OTHERS THEN

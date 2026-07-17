@@ -1,5 +1,20 @@
 # 📘 Task 08 — Isolation Levels & Read Phenomena
 
+## Kiến thức đạt được
+
+> Đây là những gì cần **ghi nhớ và mang theo áp dụng cho các dự án sau** — không phải bản tóm tắt việc đã làm trong task này.
+
+| Nội dung chính | Ghi nhớ & áp dụng cho dự án sau |
+|---|---|
+| **4 hiện tượng đọc sai lệch cần thuộc lòng** | Dirty Read, Non-Repeatable Read, Phantom Read, Lost Update — mỗi hiện tượng ứng với 1 mức Isolation cụ thể chặn được nó; đây là bộ từ vựng chung để trao đổi với bất kỳ DBA/engineer nào về bug liên quan tới dữ liệu đồng thời. |
+| **MVCC là cơ chế ngầm giải thích mọi hành vi trước đó** | Không hiểu MVCC thì không thể giải thích *tại sao* CHECK không chặn được Lost Update (Task 03), *tại sao* `FOR UPDATE` hoạt động (Task 04), hay *tại sao* audit trong transaction lại nhạy cảm với abort (Task 06) — luôn quay lại MVCC khi cần giải thích "vì sao" ở tầng dưới. |
+| **Snapshot mới mỗi câu lệnh vs snapshot cố định cả transaction** | `READ COMMITTED` làm mới snapshot mỗi câu lệnh; `REPEATABLE READ` cố định từ lúc `BEGIN`; `SERIALIZABLE` thêm cơ chế SSI phát hiện xung đột đọc-ghi. Chọn mức isolation nghĩa là chọn đánh đổi giữa tính nhất quán và chi phí/độ phức tạp retry. |
+| **Mặc định READ COMMITTED là đủ cho hầu hết trường hợp** | Chỉ nâng lên `REPEATABLE READ`/`SERIALIZABLE` khi có bằng chứng cụ thể cần — vì mức càng cao càng tốn chi phí, và `SERIALIZABLE` bắt buộc ứng dụng phải tự cài logic retry khi gặp lỗi `could not serialize access`. |
+| **Atomic UPDATE thường rẻ hơn nâng Isolation Level** | Cách sửa Lost Update tốt nhất thường không phải nâng `SERIALIZABLE` mà là viết lại thành 1 câu Atomic UPDATE; nhớ "Write Skew" là hiện tượng riêng ngoài 4 loại chuẩn, chỉ `SERIALIZABLE` chặn được; và đừng giả định mặc định isolation giống nhau giữa các hệ quản trị CSDL khác nhau (Postgres RC ≠ MySQL/InnoDB RR). |
+| **Áp dụng khi debug bug "dữ liệu thỉnh thoảng sai"** | Bất kỳ bug nào có đặc điểm "thỉnh thoảng mới xảy ra, không tái hiện được ổn định" liên quan tới dữ liệu đọc/ghi — nghĩ ngay tới 4 hiện tượng đọc sai lệch và kiểm tra mức isolation đang dùng trước khi đi tìm nguyên nhân khác. |
+
+---
+
 ## 🎯 Mục đích
 
 Hiểu 4 hiện tượng đọc sai lệch (Read Phenomena) khi nhiều Transaction chạy song song, và cách PostgreSQL MVCC xử lý chúng qua 4 mức Isolation Level.

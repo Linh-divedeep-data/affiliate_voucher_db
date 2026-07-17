@@ -1,0 +1,14 @@
+# ── OS & Editor ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# ── PostgreSQL ──
+*.sql.bak
+*.dump
+*.log
